@@ -353,10 +353,22 @@ def delete_user_record(request):
         if response.status_code == 200:
             try:
                 resp = response.json()
-                status = resp.get("ResponseStatus", {}).get("statusString", "").lower()
-                sub_status = resp.get("ResponseStatus", {}).get("subStatusCode", "")
+                print(resp, "----------------------------")
+
+                # Hikvision sometimes returns flat / sometimes nested → handle both
+                status_code = resp.get("statusCode")
+                status_string = resp.get("statusString", "").lower()
+                sub_status = resp.get("subStatusCode", "")
+
+                # fallback for ResponseStatus style
+                if not status_code and "ResponseStatus" in resp:
+                    rs = resp.get("ResponseStatus", {})
+                    status_code = rs.get("statusCode")
+                    status_string = rs.get("statusString", "").lower()
+                    sub_status = rs.get("subStatusCode", "")
+
                 
-                if status == "ok" or sub_status == "ok":
+                if status_string == "ok" or sub_status == "ok":
                     return JsonResponse({
                         "status": "success",
                         "message": f"User {employee_no} deleted permanently from device",
@@ -394,6 +406,9 @@ def delete_user_record(request):
     
 
     from django.http import JsonResponse
+
+
+
 from django.views.decorators.csrf import csrf_exempt
 import requests
 from requests.auth import HTTPDigestAuth
